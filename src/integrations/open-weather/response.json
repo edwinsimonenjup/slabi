@@ -1,0 +1,45 @@
+{
+	"coord": {
+		"lon": 110.3718,
+		"lat": 1.5519
+	},
+	"weather": [
+		{
+			"id": 802,
+			"main": "Clouds",
+			"description": "scattered clouds",
+			"icon": "03d"
+		}
+	],
+	"base": "stations",
+	"main": {
+		"temp": 30.09,
+		"feels_like": 37.09,
+		"temp_min": 29.48,
+		"temp_max": 30.09,
+		"pressure": 1010,
+		"humidity": 79,
+		"sea_level": 1010,
+		"grnd_level": 1008
+	},
+	"visibility": 10000,
+	"wind": {
+		"speed": 2.06,
+		"deg": 0
+	},
+	"clouds": {
+		"all": 40
+	},
+	"dt": 1795161636,
+	"sys": {
+		"type": 1,
+		"id": 9366,
+		"country": "MY",
+		"sunrise": 1795126972,
+		"sunset": 1795170330
+	},
+	"timezone": 28800,
+	"id": 1735634,
+	"name": "Kuching",
+	"cod": 200
+}

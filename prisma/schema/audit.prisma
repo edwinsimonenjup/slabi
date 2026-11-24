@@ -1,0 +1,29 @@
+enum AuditOutcome {
+  SUCCESS
+  DENIED_RBAC
+  DENIED_ABAC
+  ERROR
+}
+
+model AuditLog {
+  id           String       @id @default(uuid()) @db.Uuid
+  timestamp    DateTime     @default(now())
+  userId       String?      @db.Uuid
+  action       String       @db.VarChar(100)
+  resourceType String       @db.VarChar(50)
+  resourceId   String?      @db.Uuid
+  outcome      AuditOutcome
+  ipAddress    String?      @db.VarChar(45)
+  userAgent    String?      @db.Text
+  details      Json?
+
+  active       Boolean      @default(true)
+  createdBy    String       @db.VarChar(75)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(6)
+  updatedBy    String?      @db.VarChar(75)
+  updatedAt    DateTime     @default(now()) @db.Timestamptz(6)
+
+  @@index([timestamp])
+  @@index([userId])
+  @@index([resourceType, resourceId])
+}

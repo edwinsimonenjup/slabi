@@ -1,0 +1,84 @@
+model User {
+  id          String                @id @default(uuid()) @db.Uuid
+  email       String                @unique
+  username            String        @unique(map: "users_username_unique") @db.VarChar(255)
+  fullName            String        @db.VarChar(255)
+  password            String               @db.VarChar(255)
+  mfaOtp              String?              @db.VarChar(255)
+  mfaOtpExpiredAt     DateTime?            @db.Timestamptz(6)
+  verificationToken   String?              @db.VarChar(255)
+  tokenExpiredAt      DateTime?            @db.Timestamptz(6)
+  resetToken          String?              @db.VarChar(255)
+  resetTokenExpiredAt DateTime?            @db.Timestamptz(6)
+  isVerify            Boolean?             @default(false)
+  active              Boolean              @default(true)
+  createdBy           String               @db.VarChar(75)
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+  updatedBy           String?              @db.VarChar(75)
+  updatedAt           DateTime             @default(now()) @db.Timestamptz(6)
+  settings            String               @db.Text
+  assignments UserRoleAssignment[]
+}
+
+model Role {
+  id          String            @id @default(uuid()) @db.Uuid
+  name        String            @db.VarChar(50)
+  code        String            @db.VarChar(255)
+  active      Boolean           @default(true)
+  createdBy   String            @db.VarChar(75)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedBy   String?           @db.VarChar(75)
+  updatedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  permissions RolePermission[]
+  assignments UserRoleAssignment[]
+
+  @@unique([code, name])
+}
+
+model Permission {
+  id       String            @id @default(uuid()) @db.Uuid
+  resource String            @db.VarChar(50)
+  action   String            @db.VarChar(50)
+  active      Boolean           @default(true)
+  createdBy   String            @db.VarChar(75)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedBy   String?           @db.VarChar(75)
+  updatedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  roles    RolePermission[]
+
+  @@unique([resource, action])
+}
+
+model RolePermission {
+  roleId       String     @db.Uuid
+  permissionId String     @db.Uuid
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  active      Boolean           @default(true)
+  createdBy   String            @db.VarChar(75)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedBy   String?           @db.VarChar(75)
+  updatedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  @@id([roleId, permissionId])
+}
+
+enum EntityType {
+  GLOBAL
+  AGENCY
+}
+
+model UserRoleAssignment {
+  userId     String     @db.Uuid
+  roleId     String     @db.Uuid
+  entityType EntityType
+  entityId   String     @db.Uuid
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  active      Boolean           @default(true)
+  createdBy   String            @db.VarChar(75)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedBy   String?           @db.VarChar(75)
+  updatedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  @@id([userId, roleId, entityType, entityId])
+  @@index([entityType, entityId])
+}

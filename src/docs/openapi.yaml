@@ -1,0 +1,432 @@
+openapi: 3.1.1
+info:
+  title: Avalon API
+  version: 0.1.10
+  summary: Avalon REST API
+  description: |
+    Authentication endpoints for Avalon.
+
+    Every response uses the JSend envelope: `success`, `fail` (client
+    error) or `error` (server error). Request and response fields are
+    camelCase.
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+
+# Applies to every operation unless it sets `security: []`
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: Authentication and session endpoints
+  - name: Weather
+    description: Weather data endpoints
+
+paths:
+  /whoami:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated user
+      description: >-
+        Returns the id of the user the bearer token belongs to. Useful for
+        confirming a token is valid without hitting a business endpoint.
+      responses:
+        "200":
+          description: Authenticated user id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhoAmIResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: >-
+            Always returns success regardless of whether the email is
+            registered, to avoid leaking which emails exist in the system.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password using a reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Reset token is invalid or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Exchange a refresh token for a new token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          description: Refresh token invalid, expired, or user no longer exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: >-
+        Creates a bare user account with no roles assigned. An admin must
+        grant access afterward via a separate endpoint.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /weather/locations:
+    get:
+      tags: [Weather]
+      summary: Get list of locations
+      security: [{ apiKeyAuth: [] }]
+      description: >-
+        Return a list of locations for which weather data is available. Requires a valid API key.
+      responses:
+        "200":
+          description: List of available locations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherLocationsResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedApiKey"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid or expired token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnauthorizedApiKey:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+
+  schemas:
+    # ---- Requests ----
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+
+    ResetPasswordRequest:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
+          maxLength: 255
+      required: [token, newPassword]
+
+    RefreshTokenRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+      required: [refreshToken]
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 255
+        fullName:
+          type: string
+        settings:
+          type: string
+      required: [email, password, fullName, settings]
+
+    # ---- Shared data shapes ----
+    TokenPair:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+      required: [accessToken, refreshToken]
+
+    RegisteredUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+      required: [id, email, fullName]
+
+    # ---- Success responses (JSend) ----
+    WhoAmIResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              format: uuid
+          required: [userId]
+      required: [status, data]
+
+    LoginResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/TokenPair"
+      required: [status, data]
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/TokenPair"
+      required: [status, data]
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+      required: [status]
+
+    RegisterResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RegisteredUser"
+      required: [status, data]
+
+    # ---- Error responses (JSend) ----
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [fail, error]
+        message:
+          type: string
+        data:
+          type: [object, "null"]
+          additionalProperties: true
+      required: [status]
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [fail]
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+            errors:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+                  rule:
+                    type: string
+          required: [message, errors]
+      required: [status, data]
+
+    #---- Weather API ----
+    WeatherLocationsResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [success]
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            locations:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  location:
+                    type: string
+                  lat:
+                    type: number
+                  lon:
+                    type: number
+              required: [id, location, lat, lon]
+          required: [locations]

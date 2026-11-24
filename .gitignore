@@ -1,0 +1,19 @@
+node_modules
+
+# Prisma generated client (matches output = "../src/generated/prisma")
+src/generated
+
+# Environment variables (keep the sample)
+.env
+.env.*
+!.env.sample
+
+# Editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.swp
+
+logs
+dist
